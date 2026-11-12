@@ -1,0 +1,25 @@
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import {webcrypto} from 'node:crypto';
+const html={innerHTML:''},dialog={innerHTML:'',open:false,showModal(){this.open=true;},close(){this.open=false;},querySelector(){return null;},querySelectorAll(){return [];},addEventListener(){}};
+const listeners={},storage=new Map();const document={title:'',documentElement:{classList:{toggle(){}}},querySelector(s){return s==='#app'?html:s==='#modal'?dialog:s==='#toast'?{textContent:'',classList:{add(){},remove(){}}}:null;},querySelectorAll(){return [];},addEventListener(n,fn){listeners[n]=fn;}};
+const sandbox={document,crypto:webcrypto,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},console,Intl,Date,Math,Number,String,Array,Object,Map,Set,JSON,Boolean,Blob,URL,setTimeout:()=>0,clearTimeout(){},window:{addEventListener(){},scrollTo(){},print(){}},FormData:class{constructor(f){this.data=f.fields;}[Symbol.iterator](){return Object.entries(this.data)[Symbol.iterator]();}}};
+const code=(await readFile('dist/core.mjs','utf8')).replace(/^export /gm,'')+'\n'+(await readFile('dist/app.mjs','utf8')).replace(/^import .*?;\r?\n/,'')+`\nglobalThis.qa={pages,renderPage,transactionModal,goalModal,eventModal,categoryModal,metrics,settlement,getState:()=>state,getPage:()=>page,setPage:p=>page=p,setState:s=>state=s,getDefault:defaults,getDemo:demo,html:()=>document.querySelector('#app').innerHTML,filter:f=>filters=f,privatePartner:p=>personal=p,savings:p=>savingScope=p};`;
+vm.createContext(sandbox);vm.runInContext(code,sandbox);const q=sandbox.qa;
+for(const dataset of [q.getDefault(),q.getDemo()]){q.setState(dataset);for(const [page] of q.pages){q.setPage(page);const text=q.renderPage();assert(text.length>150,page+' should render');assert(!/\bNaN\b|undefined/.test(text),page+' has an invalid value');}}
+q.setState(q.getDemo());q.setPage('dashboard');q.getState().profile.share1=false;assert(q.renderPage().includes('Solde disponible'));assert(q.renderPage().includes('Masqué'));
+q.setPage('personal');assert(!q.renderPage().includes('Achats personnels'),'Personal descriptions must be masked');
+q.setPage('calendar');q.getState().events.push({id:'secret',name:'Détail personnel confidentiel',date:new Date().toISOString().slice(0,7)+'-25',scope:'p1',amount:10,recurring:false});assert(!q.renderPage().includes('Détail personnel confidentiel'));
+q.transactionModal();assert(dialog.innerHTML.includes('Ajouter un mouvement'));q.goalModal();assert(dialog.innerHTML.includes('Un nouveau projet'));q.eventModal();assert(dialog.innerHTML.includes('Une date à retenir'));q.categoryModal();assert(dialog.innerHTML.includes('Ajouter une catégorie'));
+q.setState(q.getDefault());const day=new Date().toISOString().slice(0,10),m=day.slice(0,7),submit=(kind,fields,id='')=>listeners.submit({preventDefault(){},target:{dataset:{form:kind,id},fields}});
+const tx={type:'income',amount:'600000',date:day,scope:'shared',owner:'p1',payer:'p1',from:'p1',to:'p2',category:'Logement',subcategory:'',description:'Salaire test',source:'Salaire principal',status:'paid',frequency:'monthly',split:'default',percent:'50',receipt:'',goalId:'',beneficiary:''};
+submit('transaction',tx);assert.equal(q.getState().transactions.length,1);assert.equal(q.metrics(q.getState(),m).income,600000);
+submit('transaction',{...tx,type:'expense',amount:'100000',source:'',description:'Loyer test',frequency:'once'});assert.equal(q.metrics(q.getState(),m).available,500000);
+const id=q.getState().transactions[1].id;submit('transaction',{...tx,type:'expense',amount:'120000',source:'',description:'Loyer modifié',frequency:'once'},id);assert.equal(q.getState().transactions.length,2);assert.equal(q.metrics(q.getState(),m).expense,120000);
+submit('goal',{name:'Voyage test',scope:'shared',target:'500000',opening:'100000',deadline:'2027-10-01',priority:'medium',monthly:'50000',split:'proportional',percent:'50'});assert.equal(q.getState().goals.length,1);
+submit('transaction',{...tx,type:'saving',amount:'50000',goalId:q.getState().goals[0].id,frequency:'once'});assert.equal(q.metrics(q.getState(),m).available,430000);
+submit('transaction',{...tx,type:'reimbursement',amount:'10000',from:'p2',to:'p1',frequency:'once'});assert.equal(q.metrics(q.getState(),m).available,430000);
+submit('event',{name:'Échéance test',date:day,scope:'shared',amount:'1000',recurring:'on'});assert.equal(q.getState().events.length,1);
+assert(storage.size>0,'A successful save must persist data');
+console.log('Fonctionnement vérifié : 14 vues vides et de démonstration, formulaires, création et modification, confidentialité visuelle et sauvegarde locale. Vérification en navigateur non incluse.');
