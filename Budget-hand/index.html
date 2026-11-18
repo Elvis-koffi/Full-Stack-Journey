@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Website</title>
+</head>
+<body>
+
+    <header>
+        <h1> Mon Budget</h1>
+    </header>
+
+    <main>
+    <!-- SUMMARY -->
+    <section id="summary">
+      <h2>Résumé</h2>
+      <p>Revenus: <span id="total-income">0</span> FCFA</p>
+      <p>Dépenses: <span id="total-expenses">0</span> FCFA</p>
+      <p>Solde: <span id="balance">0</span> FCFA</p>
+    </section>
+
+    <!-- FORM -->
+    <section id="add-expense">
+      <h2>Ajouter une dépense / revenu</h2>
+      <form id="expense-form">
+        <label for="name">Nom:</label>
+        <input type="text" id="name" placeholder="Ex: Marché" required>
+
+        <label for="amount">Montant:</label>
+        <input type="number" id="amount" placeholder="Ex: 5000" required>
+
+        <label for="type">Type:</label>
+        <select id="type">
+          <option value="expense">Dépense</option>
+          <option value="income">Revenu</option>
+        </select>
+
+        <label for="category">Catégorie:</label>
+        <select id="category">
+          <option value="food">Nourriture</option>
+          <option value="transport">Transport</option>
+          <option value="logement">Logement</option>
+          <option value="autre">Autre</option>
+        </select>
+
+        <button type="submit">Ajouter</button>
+      </form>
+    </section>
+
+    <!-- LIST -->
+    <section id="list">
+      <h2>Mes transactions</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Montant</th>
+            <th>Catégorie</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="expenses-list">
+          <!-- JS will add rows here on Day 3 -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+
+</body>
+</html>
